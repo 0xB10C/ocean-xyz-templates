@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCEAN.xyz pool template comparison</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+
+    <h2>Quick and dirty OCEAN pool template fee, size, tx count visualization</h2>
+    <p>Data provided by OCEAN.xyz's websockets</p>
+    <p>source: https://github.com/0xB10C/ocean-xyz-templates</p>
+    <br>
+
+    <canvas id="feeChart" width="800" height="400"></canvas>
+    <canvas id="sizeChart" width="800" height="400"></canvas>
+    <canvas id="countChart" width="800" height="400"></canvas>
+
+    <script>
+      const socketOcean = new WebSocket('wss://ocean.xyz:12346/');
+      const socketOrdis = new WebSocket('wss://ocean.xyz:12348/');
+      const socketCore  = new WebSocket('wss://ocean.xyz:12347/')
+
+      sockets = [socketOcean, socketOrdis, socketCore];
+      sockets.forEach((socket) => {
+        socket.addEventListener("open", (event) => {
+          socket.send('{"track-template":0}');
+        });
+      })
+
+      function makeChart(context, title, yUnit) {
+        return new Chart(context, {
+          type: 'line',
+          data: {
+            datasets: [
+              { label: 'Ocean', data: [], fill: false, },
+              { label: 'Ordis', data: [], fill: false, },
+              { label: 'Core',  data: [], fill: false, },
+            ],
+          },
+          options: {
+            scales: {
+              x: {
+                type: 'time',
+              },
+              y: {
+                ticks: {
+                  callback: (v) => v + yUnit,
+                },
+              },
+            },
+            plugins: {
+              title: {
+                display: true,
+                text: title
+              }
+            }
+          }
+        });
+      }
+
+  let feeChart = makeChart(document.getElementById('feeChart').getContext('2d'), "Template Fees", " BTC");
+  let sizeChart = makeChart(document.getElementById('sizeChart').getContext('2d'), "Template Size", " kB");
+  let countChart = makeChart(document.getElementById('countChart').getContext('2d'), "Template Transaction Count", "");
+
+  for (const [index, socket] of sockets.entries()) {
+    socket.addEventListener('message', (event) => {
+      const data = JSON.parse(event.data);
+      const [count, fees, size] = parseStats(data.stats);
+
+      feeChart.data.datasets[index].data.push({ x: Date.now(), y: fees });
+      countChart.data.datasets[index].data.push({ x: Date.now(), y: count });
+      sizeChart.data.datasets[index].data.push({ x: Date.now(), y: size });
+
+      const maxDataPoints = 1000;
+      if (feeChart.data.datasets[index].data > maxDataPoints) {
+        feeChart.data.datasets[index].data.shift();
+        sizeChart.data.datasets[index].data.shift();
+        countChart.data.datasets[index].data.shift();
+      }
+
+      feeChart.update();
+      sizeChart.update();
+      countChart.update();
+    });
+  }
+
+  function parseStats(stats) {
+      const parser = new DOMParser();
+      const parsedStats = parser.parseFromString(stats, 'text/xml');
+      const tableRows = parsedStats.children[0].children[0].children
+
+      const countRow = tableRows[0]
+      const feeRow = tableRows[1]
+      const sizeRow = tableRows[2]
+
+      const count = parseInt(countRow.children[1].innerHTML)
+      const fees = parseFloat(feeRow.children[1].innerHTML.replace(" BTC", ""))
+      const size = parseFloat(sizeRow.children[1].innerHTML.replace(" kB", ""))
+      return [count, fees, size];
+  }
+  </script>
+</body>
+</html>
