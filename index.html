@@ -47,7 +47,7 @@
               },
               y: {
                 ticks: {
-                  callback: (v) => v + yUnit,
+                  callback: (v) => ((typeof(v) == "float") ? v.toFixed(2): v) + yUnit,
                 },
               },
             },
