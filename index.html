@@ -1,120 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OCEAN.xyz pool template comparison</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OCEAN.xyz pool template comparison</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
+
 <body>
 
-    <h2>Quick and dirty OCEAN pool template fee, size, tx count visualization</h2>
-    <p>Data provided by OCEAN.xyz's websockets</p>
-    <p>source: https://github.com/0xB10C/ocean-xyz-templates</p>
-    <br>
+  <h2>Quick and dirty OCEAN pool template fee, size, tx count visualization</h2>
+  <p>Data provided by OCEAN.xyz's websockets</p>
+  <p>source: https://github.com/0xB10C/ocean-xyz-templates</p>
+  <br>
 
-    <canvas id="feeChart" width="800" height="400"></canvas>
-    <canvas id="sizeChart" width="800" height="400"></canvas>
-    <canvas id="countChart" width="800" height="400"></canvas>
+  <canvas id="feeChart" width="800" height="400"></canvas>
+  <canvas id="sizeChart" width="800" height="400"></canvas>
+  <canvas id="countChart" width="800" height="400"></canvas>
 
-    <script>
-      const socketOcean = new WebSocket('wss://ocean.xyz:12346/');
-      const socketOrdis = new WebSocket('wss://ocean.xyz:12348/');
-      const socketCore  = new WebSocket('wss://ocean.xyz:12347/')
-      const COIN = 100_000_000;
-      sockets = [socketOcean, socketOrdis, socketCore];
-      sockets.forEach((socket) => {
-        socket.addEventListener("open", (event) => {
-          socket.send('{"track-template":0}');
-        });
-      })
+  <script>
+    const socketOcean = new WebSocket('wss://ocean.xyz:12346/');
+    const socketOrdis = new WebSocket('wss://ocean.xyz:12348/');
+    const socketCore = new WebSocket('wss://ocean.xyz:12347/')
+    const COIN = 100_000_000;
+    sockets = [socketOcean, socketOrdis, socketCore];
+    sockets.forEach((socket) => {
+      socket.addEventListener("open", (event) => {
+        socket.send('{"track-template":0}');
+      });
+    })
 
-      function makeChart(context, title, yUnit) {
-        return new Chart(context, {
-          type: 'line',
-          data: {
-            datasets: [
-              { label: 'Ocean', data: [], fill: false, },
-              { label: 'Ordis', data: [], fill: false, },
-              { label: 'Core',  data: [], fill: false, },
-            ],
-          },
-          options: {
-            scales: {
-              x: {
-                type: 'time',
-              },
-              y: {
-                ticks: {
-                  callback: (v) => ((typeof(v) == "float") ? v.toFixed(2): v) + yUnit,
-                },
-                beginAtZero: true,
-              },
+    function makeChart(context, title, yUnit) {
+      return new Chart(context, {
+        type: 'line',
+        data: {
+          datasets: [
+            { label: 'Ocean', data: [], fill: false, },
+            { label: 'Ordis', data: [], fill: false, },
+            { label: 'Core', data: [], fill: false, },
+          ],
+        },
+        options: {
+          scales: {
+            x: {
+              type: 'time',
             },
-            plugins: {
-              title: {
-                display: true,
-                text: title
-              }
+            y: {
+              ticks: {
+                callback: (v) => ((typeof (v) == "float") ? v.toFixed(2) : v) + yUnit,
+              },
+              beginAtZero: true,
+            },
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: title
             }
           }
-        });
-      }
+        }
+      });
+    }
 
-  let feeChart = makeChart(document.getElementById('feeChart').getContext('2d'), "Template Fees", " BTC");
-  let sizeChart = makeChart(document.getElementById('sizeChart').getContext('2d'), "Template Size", " kB");
-  let countChart = makeChart(document.getElementById('countChart').getContext('2d'), "Template Transaction Count", "");
+    let feeChart = makeChart(document.getElementById('feeChart').getContext('2d'), "Template Fees", " BTC");
+    let sizeChart = makeChart(document.getElementById('sizeChart').getContext('2d'), "Template Size", " kB");
+    let countChart = makeChart(document.getElementById('countChart').getContext('2d'), "Template Transaction Count", "");
 
-  let state = [];
-  for (const [index, socket] of sockets.entries()) {
-    socket.addEventListener('message', (event) => {
-      const data = JSON.parse(event.data);
-      updateState(state, index, data);
+    let state = [];
+    for (const [index, socket] of sockets.entries()) {
+      socket.addEventListener('message', (event) => {
+        const data = JSON.parse(event.data);
+        updateState(state, index, data);
 
-      const fees = Object.values(state[index]).reduce((acc, tx) => acc + tx.fee, 0)
-      const size = Object.values(state[index]).reduce((acc, tx) => acc + tx.bytes, 0)
-      const count = Object.values(state[index]).length
-      feeChart.data.datasets[index].data.push({ x: Date.now(), y: fees / COIN });
-      countChart.data.datasets[index].data.push({ x: Date.now(), y: count });
-      sizeChart.data.datasets[index].data.push({ x: Date.now(), y: size / 1000 });
+        const fees = Object.values(state[index]).reduce((acc, tx) => acc + tx.fee, 0)
+        const size = Object.values(state[index]).reduce((acc, tx) => acc + tx.bytes, 0)
+        const count = Object.values(state[index]).length
+        feeChart.data.datasets[index].data.push({ x: Date.now(), y: fees / COIN });
+        countChart.data.datasets[index].data.push({ x: Date.now(), y: count });
+        sizeChart.data.datasets[index].data.push({ x: Date.now(), y: size / 1000 });
 
-      const maxDataPoints = 1000;
-      if (feeChart.data.datasets[index].data > maxDataPoints) {
-        feeChart.data.datasets[index].data.shift();
-        sizeChart.data.datasets[index].data.shift();
-        countChart.data.datasets[index].data.shift();
-      }
+        const maxDataPoints = 1000;
+        if (feeChart.data.datasets[index].data > maxDataPoints) {
+          feeChart.data.datasets[index].data.shift();
+          sizeChart.data.datasets[index].data.shift();
+          countChart.data.datasets[index].data.shift();
+        }
 
-      feeChart.update();
-      sizeChart.update();
-      countChart.update();
-    });
-  }
+        feeChart.update();
+        sizeChart.update();
+        countChart.update();
+      });
+    }
 
-  function updateState(state, index, data) {
-    if (data.hasOwnProperty("txns")) {
-      state[index] = {}
-      for (tx of data.txns) {
-        state[index][tx.sid] = tx
-      }
-    } else {
-      for (sid of data.deleted) {
-        delete state[index][sid]
-      }
+    function updateState(state, index, data) {
+      if (data.hasOwnProperty("txns")) {
+        state[index] = {}
+        for (tx of data.txns) {
+          state[index][tx.sid] = tx
+        }
+      } else {
+        for (sid of data.deleted) {
+          delete state[index][sid]
+        }
 
-      for(tx of data.modified_or_new) {
-        if (tx.hasOwnProperty("t")) {
-          state[index][tx.s] = {
-            bytes: tx.b,
-            fee: tx.f,
-            rate: tx.r,
-            vsize: tx.z,
+        for (tx of data.modified_or_new) {
+          if (tx.hasOwnProperty("t")) {
+            state[index][tx.s] = {
+              bytes: tx.b,
+              fee: tx.f,
+              rate: tx.r,
+              vsize: tx.z,
+            }
           }
         }
       }
     }
-  }
   </script>
 </body>
+
 </html>
