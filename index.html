@@ -22,7 +22,7 @@
       const socketOcean = new WebSocket('wss://ocean.xyz:12346/');
       const socketOrdis = new WebSocket('wss://ocean.xyz:12348/');
       const socketCore  = new WebSocket('wss://ocean.xyz:12347/')
-
+      const COIN = 100_000_000;
       sockets = [socketOcean, socketOrdis, socketCore];
       sockets.forEach((socket) => {
         socket.addEventListener("open", (event) => {
@@ -66,14 +66,18 @@
   let sizeChart = makeChart(document.getElementById('sizeChart').getContext('2d'), "Template Size", " kB");
   let countChart = makeChart(document.getElementById('countChart').getContext('2d'), "Template Transaction Count", "");
 
+  let state = [];
   for (const [index, socket] of sockets.entries()) {
     socket.addEventListener('message', (event) => {
       const data = JSON.parse(event.data);
-      const [count, fees, size] = parseStats(data.stats);
+      updateState(state, index, data);
 
-      feeChart.data.datasets[index].data.push({ x: Date.now(), y: fees });
+      const fees = Object.values(state[index]).reduce((acc, tx) => acc + tx.fee, 0)
+      const size = Object.values(state[index]).reduce((acc, tx) => acc + tx.bytes, 0)
+      const count = Object.values(state[index]).length
+      feeChart.data.datasets[index].data.push({ x: Date.now(), y: fees / COIN });
       countChart.data.datasets[index].data.push({ x: Date.now(), y: count });
-      sizeChart.data.datasets[index].data.push({ x: Date.now(), y: size });
+      sizeChart.data.datasets[index].data.push({ x: Date.now(), y: size / 1000 });
 
       const maxDataPoints = 1000;
       if (feeChart.data.datasets[index].data > maxDataPoints) {
@@ -88,19 +92,28 @@
     });
   }
 
-  function parseStats(stats) {
-      const parser = new DOMParser();
-      const parsedStats = parser.parseFromString(stats, 'text/xml');
-      const tableRows = parsedStats.children[0].children[0].children
+  function updateState(state, index, data) {
+    if (data.hasOwnProperty("txns")) {
+      state[index] = {}
+      for (tx of data.txns) {
+        state[index][tx.sid] = tx
+      }
+    } else {
+      for (sid of data.deleted) {
+        delete state[index][sid]
+      }
 
-      const countRow = tableRows[0]
-      const feeRow = tableRows[1]
-      const sizeRow = tableRows[2]
-
-      const count = parseInt(countRow.children[1].innerHTML)
-      const fees = parseFloat(feeRow.children[1].innerHTML.replace(" BTC", ""))
-      const size = parseFloat(sizeRow.children[1].innerHTML.replace(" kB", ""))
-      return [count, fees, size];
+      for(tx of data.modified_or_new) {
+        if (tx.hasOwnProperty("t")) {
+          state[index][tx.s] = {
+            bytes: tx.b,
+            fee: tx.f,
+            rate: tx.r,
+            vsize: tx.z,
+          }
+        }
+      }
+    }
   }
   </script>
 </body>
