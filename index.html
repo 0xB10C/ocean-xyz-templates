@@ -11,11 +11,14 @@
 </head>
 
 <body>
-
   <h2>Quick and dirty OCEAN pool template fee, size, tx count visualization</h2>
   <p>Data provided by OCEAN.xyz's websockets</p>
   <p>source: https://github.com/0xB10C/ocean-xyz-templates</p>
   <br>
+  <label>Begin y-axis at zero</label>
+  <input type="checkbox" id="beginatzero" name="beginatzero" checked>
+  <br>
+
 
   <canvas id="feeChart" width="800" height="400"></canvas>
   <canvas id="sizeChart" width="800" height="400"></canvas>
@@ -68,6 +71,16 @@
     let feeChart = makeChart(document.getElementById('feeChart').getContext('2d'), "Template Fees", " BTC");
     let sizeChart = makeChart(document.getElementById('sizeChart').getContext('2d'), "Template Size", " kB");
     let countChart = makeChart(document.getElementById('countChart').getContext('2d'), "Template Transaction Count", "");
+
+    document.getElementById("beginatzero").addEventListener('change', function() {
+      feeChart.options.scales.y.beginAtZero = this.checked
+      sizeChart.options.scales.y.beginAtZero = this.checked
+      countChart.options.scales.y.beginAtZero = this.checked
+    });
+
+    feeChart.update();
+    sizeChart.update();
+    countChart.update();
 
     let state = [];
     for (const [index, socket] of sockets.entries()) {
