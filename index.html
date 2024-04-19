@@ -19,7 +19,6 @@
   <input type="checkbox" id="beginatzero" name="beginatzero" checked>
   <br>
 
-
   <canvas id="feeChart" width="800" height="400"></canvas>
   <canvas id="sizeChart" width="800" height="400"></canvas>
   <canvas id="countChart" width="800" height="400"></canvas>
@@ -28,8 +27,9 @@
     const socketOcean = new WebSocket('wss://ocean.xyz:12346/');
     const socketOrdis = new WebSocket('wss://ocean.xyz:12348/');
     const socketCore = new WebSocket('wss://ocean.xyz:12347/')
+    const socketDataFree = new WebSocket('wss://ocean.xyz:12349/')
     const COIN = 100_000_000;
-    sockets = [socketOcean, socketOrdis, socketCore];
+    sockets = [socketOcean, socketOrdis, socketCore, socketDataFree];
     sockets.forEach((socket) => {
       socket.addEventListener("open", (event) => {
         socket.send('{"track-template":0}');
@@ -41,9 +41,10 @@
         type: 'line',
         data: {
           datasets: [
-            { label: 'Ocean', data: [], fill: false, },
+            { label: 'Default', data: [], fill: false, },
             { label: 'Ordis', data: [], fill: false, },
             { label: 'Core', data: [], fill: false, },
+            { label: 'DataFree', data: [], fill: false, },
           ],
         },
         options: {
